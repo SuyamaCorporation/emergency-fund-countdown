@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>緊急資金積立カウントダウン</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        violet: {
+          50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe',
+          300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6',
+          600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6',
+          900: '#4c1d95'
+        },
+        gold: {
+          50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a',
+          300: '#fcd34d', 400: '#fbbf24', 500: '#f59e0b',
+          600: '#d97706', 700: '#b45309', 800: '#92400e',
+          900: '#78350f'
+        }
+      }
+    }
+  }
+}
+</script>
+</head>
+<body class="bg-violet-50 min-h-screen font-sans">
+
+<div class="max-w-xl mx-auto px-4 py-6">
+  <h1 class="text-3xl font-bold text-violet-700 mb-1 text-center">🛡️ 緊急資金積立カウントダウン</h1>
+  <p class="text-violet-400 text-center text-sm mb-6">目標金額まであと何ヶ月？</p>
+
+  <!-- Settings -->
+  <div class="bg-white rounded-2xl shadow-md p-5 mb-5 border border-violet-100">
+    <h2 class="text-base font-semibold text-violet-700 mb-4">目標設定</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-xs text-violet-500 mb-1 block" for="monthlyExpenses">月間必要生活費 (¥)</label>
+        <input id="monthlyExpenses" type="number" min="0" placeholder="200000" aria-label="月間必要生活費"
+          class="w-full border border-violet-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+      </div>
+      <div>
+        <label class="text-xs text-violet-500 mb-1 block" for="targetMonths">目標月数</label>
+        <select id="targetMonths" aria-label="目標月数"
+          class="w-full border border-violet-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+          <option value="3">3ヶ月分</option>
+          <option value="6" selected>6ヶ月分</option>
+          <option value="12">12ヶ月分</option>
+          <option value="custom">カスタム</option>
+        </select>
+      </div>
+      <div id="customMonthsRow" class="hidden col-span-2">
+        <label class="text-xs text-violet-500 mb-1 block" for="customMonths">カスタム月数</label>
+        <input id="customMonths" type="number" min="1" max="60" placeholder="9" aria-label="カスタム月数"
+          class="w-full border border-violet-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+      </div>
+      <div>
+        <label class="text-xs text-violet-500 mb-1 block" for="currentSavings">現在の貯蓄額 (¥)</label>
+        <input id="currentSavings" type="number" min="0" placeholder="100000" aria-label="現在の貯蓄額"
+          class="w-full border border-violet-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+      </div>
+      <div>
+        <label class="text-xs text-violet-500 mb-1 block" for="monthlyContribution">月間積立額 (¥)</label>
+        <input id="monthlyContribution" type="number" min="0" placeholder="30000" aria-label="月間積立額"
+          class="w-full border border-violet-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+      </div>
+      <div>
+        <label class="text-xs text-violet-500 mb-1 block" for="interestRate">年利率 (%) ※複利</label>
+        <input id="interestRate" type="number" min="0" max="20" step="0.1" placeholder="0.5" aria-label="年利率"
+          class="w-full border border-violet-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+      </div>
+    </div>
+    <button id="calcBtn" aria-label="計算する"
+      class="mt-4 w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl py-3 text-sm transition-colors">
+      計算する
+    </button>
+  </div>
+
+  <!-- Results -->
+  <div id="results" class="hidden space-y-4">
+
+    <!-- Key metrics -->
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-white rounded-2xl shadow-sm p-4 border border-violet-100 text-center">
+        <p class="text-xs text-violet-400 mb-1">目標額</p>
+        <p id="resTarget" class="text-lg font-bold text-violet-700"></p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-4 border border-violet-100 text-center">
+        <p class="text-xs text-violet-400 mb-1">残り不足額</p>
+        <p id="resGap" class="text-lg font-bold text-gold-600"></p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-4 border border-violet-100 text-center">
+        <p class="text-xs text-violet-400 mb-1">達成まで</p>
+        <p id="resMonths" class="text-lg font-bold text-violet-600"></p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-4 border border-violet-100 text-center">
+        <p class="text-xs text-violet-400 mb-1">達成予定</p>
+        <p id="resDate" class="text-lg font-bold text-violet-600 text-sm!"></p>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="bg-white rounded-2xl shadow-md p-5 border border-violet-100">
+      <div class="flex justify-between text-xs text-violet-500 mb-2">
+        <span>現在の進捗</span>
+        <span id="progressPct"></span>
+      </div>
+      <div class="bg-violet-100 rounded-full h-5 overflow-hidden mb-3">
+        <div id="progressBar" class="h-5 rounded-full bg-gradient-to-r from-violet-500 to-gold-400 transition-all duration-700" style="width:0%"></div>
+      </div>
+      <!-- Milestone markers -->
+      <div class="flex justify-between text-xs text-violet-400">
+        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+      </div>
+      <div id="milestoneMsg" class="mt-2 text-center text-sm font-semibold text-gold-600"></div>
+    </div>
+
+    <!-- Canvas Chart -->
+    <div class="bg-white rounded-2xl shadow-md p-5 border border-violet-100">
+      <h2 class="text-base font-semibold text-violet-700 mb-3">残高推移予測</h2>
+      <canvas id="projectionChart" height="160" aria-label="残高推移予測グラフ"
+        class="w-full rounded-lg"></canvas>
+    </div>
+
+    <!-- Streak -->
+    <div class="bg-white rounded-2xl shadow-md p-5 border border-violet-100">
+      <h2 class="text-base font-semibold text-violet-700 mb-3">積立ストリーク</h2>
+      <div class="flex items-center gap-4">
+        <div class="text-center">
+          <p id="streakCount" class="text-4xl font-bold text-gold-500">0</p>
+          <p class="text-xs text-violet-400">連続月</p>
+        </div>
+        <div class="flex-1">
+          <button id="logContribBtn" aria-label="今月の積立を記録"
+            class="w-full bg-gold-400 hover:bg-gold-500 text-white font-semibold rounded-xl py-2 text-sm transition-colors mb-2">
+            今月の積立を記録 🎯
+          </button>
+          <button id="resetStreakBtn" aria-label="ストリークをリセット"
+            class="w-full border border-violet-200 text-violet-400 hover:text-violet-600 rounded-xl py-2 text-xs transition-colors">
+            ストリークをリセット
+          </button>
+        </div>
+      </div>
+      <p id="streakLastDate" class="text-xs text-violet-300 mt-2 text-center"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const STORAGE_KEY = 'emergency-fund-data';
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+    catch(e) { return {}; }
+  }
+  function save(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+  function fmt(n) { return '¥' + Math.round(n).toLocaleString('ja-JP'); }
+
+  function getTargetMonths() {
+    const sel = document.getElementById('targetMonths').value;
+    if (sel === 'custom') return parseFloat(document.getElementById('customMonths').value) || 0;
+    return parseFloat(sel);
+  }
+
+  document.getElementById('targetMonths').addEventListener('change', function() {
+    document.getElementById('customMonthsRow').classList.toggle('hidden', this.value !== 'custom');
+  });
+
+  function projectionData(current, monthly, annualRate, target, maxMonths) {
+    const mRate = annualRate / 100 / 12;
+    const points = [];
+    let bal = current;
+    for (let m = 0; m <= maxMonths; m++) {
+      points.push(bal);
+      if (bal >= target) break;
+      bal = bal * (1 + mRate) + monthly;
+    }
+    return points;
+  }
+
+  function drawChart(points, target) {
+    const canvas = document.getElementById('projectionChart');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth || 300;
+    const h = 160;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const pad = { top: 10, right: 15, bottom: 30, left: 55 };
+    const cw = w - pad.left - pad.right;
+    const ch = h - pad.top - pad.bottom;
+
+    const maxVal = Math.max(target * 1.05, ...points);
+    const n = points.length;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid
+    ctx.strokeStyle = '#ede9fe';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (ch * i / 4);
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cw, y); ctx.stroke();
+      const val = maxVal * (1 - i/4);
+      ctx.fillStyle = '#a78bfa';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText((val / 10000).toFixed(0) + '万', pad.left - 3, y + 4);
+    }
+
+    // Target line
+    const targetY = pad.top + ch * (1 - target / maxVal);
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 3]);
+    ctx.beginPath(); ctx.moveTo(pad.left, targetY); ctx.lineTo(pad.left + cw, targetY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('目標', pad.left + cw + 2, targetY + 4);
+
+    // Line
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    points.forEach((val, i) => {
+      const x = pad.left + (i / Math.max(n-1, 1)) * cw;
+      const y = pad.top + ch * (1 - val / maxVal);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Fill under
+    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + ch);
+    grad.addColorStop(0, 'rgba(139,92,246,0.25)');
+    grad.addColorStop(1, 'rgba(139,92,246,0)');
+    ctx.beginPath();
+    points.forEach((val, i) => {
+      const x = pad.left + (i / Math.max(n-1, 1)) * cw;
+      const y = pad.top + ch * (1 - val / maxVal);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(pad.left + cw, pad.top + ch);
+    ctx.lineTo(pad.left, pad.top + ch);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // X labels
+    ctx.fillStyle = '#a78bfa';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    const step = Math.ceil(n / 6);
+    for (let i = 0; i < n; i += step) {
+      const x = pad.left + (i / Math.max(n-1, 1)) * cw;
+      ctx.fillText(i + 'M', x, h - 8);
+    }
+  }
+
+  function milestoneMessage(pct) {
+    if (pct >= 100) return '🎉 目標達成！おめでとうございます！';
+    if (pct >= 75) return '💪 もう少し！75%を超えました';
+    if (pct >= 50) return '🌟 折り返し地点！50%達成';
+    if (pct >= 25) return '🚀 順調！25%を達成しました';
+    return '🌱 積立スタート！コツコツ続けましょう';
+  }
+
+  function calcMonthsToGoal(current, monthly, annualRate, target) {
+    if (current >= target) return 0;
+    if (monthly <= 0) return Infinity;
+    const mRate = annualRate / 100 / 12;
+    if (mRate === 0) return Math.ceil((target - current) / monthly);
+    // FV = current*(1+r)^n + monthly*((1+r)^n - 1)/r >= target
+    // Solve numerically
+    let n = 0;
+    let bal = current;
+    while (bal < target && n < 1200) {
+      bal = bal * (1 + mRate) + monthly;
+      n++;
+    }
+    return n;
+  }
+
+  document.getElementById('calcBtn').addEventListener('click', () => {
+    const monthlyExp = parseFloat(document.getElementById('monthlyExpenses').value) || 0;
+    const targetMo = getTargetMonths();
+    const current = parseFloat(document.getElementById('currentSavings').value) || 0;
+    const monthly = parseFloat(document.getElementById('monthlyContribution').value) || 0;
+    const annualRate = parseFloat(document.getElementById('interestRate').value) || 0;
+
+    if (monthlyExp <= 0 || targetMo <= 0) { alert('月間生活費と目標月数を入力してください'); return; }
+    if (monthly <= 0 && current <= 0) { alert('現在の貯蓄額または月間積立額を入力してください'); return; }
+
+    const target = monthlyExp * targetMo;
+    const gap = Math.max(0, target - current);
+    const months = calcMonthsToGoal(current, monthly, annualRate, target);
+    const pct = Math.min(100, (current / target) * 100);
+
+    // Set date
+    const achieveDate = new Date();
+    achieveDate.setMonth(achieveDate.getMonth() + months);
+    const dateStr = months === 0 ? '達成済み！' : achieveDate.getFullYear() + '年' + (achieveDate.getMonth()+1) + '月';
+
+    document.getElementById('resTarget').textContent = fmt(target);
+    document.getElementById('resGap').textContent = gap === 0 ? '¥0（達成済）' : fmt(gap);
+    document.getElementById('resMonths').textContent = months === 0 ? '達成済み' : months + 'ヶ月';
+    document.getElementById('resDate').textContent = dateStr;
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = pct.toFixed(1) + '%';
+    document.getElementById('milestoneMsg').textContent = milestoneMessage(pct);
+
+    document.getElementById('results').classList.remove('hidden');
+
+    // Chart
+    const projMonths = Math.min(months + 3, 120);
+    const points = projectionData(current, monthly, annualRate, target, projMonths);
+    setTimeout(() => drawChart(points, target), 50);
+
+    // Save settings
+    const d = load();
+    d.settings = { monthlyExpenses: monthlyExp, targetMonths: targetMo, currentSavings: current, monthlyContribution: monthly, annualRate };
+    save(d);
+
+    renderStreak();
+  });
+
+  function renderStreak() {
+    const d = load();
+    const streak = d.streak || 0;
+    const lastDate = d.lastContribDate || null;
+    document.getElementById('streakCount').textContent = streak;
+    document.getElementById('streakLastDate').textContent = lastDate ? '最終記録: ' + lastDate : '記録なし';
+  }
+
+  document.getElementById('logContribBtn').addEventListener('click', () => {
+    const d = load();
+    const today = new Date();
+    const ym = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+    if (d.lastContribDate === ym) {
+      alert('今月はすでに記録済みです！');
+      return;
+    }
+    // Check if consecutive (previous month)
+    const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const prevYm = prev.getFullYear() + '-' + String(prev.getMonth()+1).padStart(2,'0');
+    if (d.lastContribDate === prevYm) {
+      d.streak = (d.streak || 0) + 1;
+    } else {
+      d.streak = 1;
+    }
+    d.lastContribDate = ym;
+    save(d);
+    renderStreak();
+    // Celebratory feedback
+    const btn = document.getElementById('logContribBtn');
+    btn.textContent = '✅ 記録しました！';
+    setTimeout(() => { btn.textContent = '今月の積立を記録 🎯'; }, 2000);
+  });
+
+  document.getElementById('resetStreakBtn').addEventListener('click', () => {
+    if (!confirm('ストリークをリセットしますか？')) return;
+    const d = load();
+    d.streak = 0;
+    d.lastContribDate = null;
+    save(d);
+    renderStreak();
+  });
+
+  // Restore settings
+  (function() {
+    const d = load();
+    if (d.settings) {
+      const s = d.settings;
+      document.getElementById('monthlyExpenses').value = s.monthlyExpenses || '';
+      document.getElementById('currentSavings').value = s.currentSavings || '';
+      document.getElementById('monthlyContribution').value = s.monthlyContribution || '';
+      document.getElementById('interestRate').value = s.annualRate || '';
+      const tm = s.targetMonths;
+      if ([3,6,12].includes(tm)) {
+        document.getElementById('targetMonths').value = tm;
+      } else if (tm) {
+        document.getElementById('targetMonths').value = 'custom';
+        document.getElementById('customMonths').value = tm;
+        document.getElementById('customMonthsRow').classList.remove('hidden');
+      }
+    }
+    renderStreak();
+  })();
+
+  window.addEventListener('resize', () => {
+    const canvas = document.getElementById('projectionChart');
+    if (!canvas.dataset.drawn) return;
+    document.getElementById('calcBtn').click();
+  });
+})();
+</script>
+</body>
+</html>
